@@ -1,0 +1,21 @@
+README
+
+This directory is searched for TeX's font metric files
+It should contain these files:
+
+cmb10.tfm     cmfib8.tfm   cmr7.tfm      cmssi10.tfm   cmtex9.tfm
+cmbsy10.tfm   cminch.tfm   cmr8.tfm      cmssi12.tfm   cmti10.tfm
+cmbx10.tfm    cmitt10.tfm  cmr9.tfm      cmssi17.tfm   cmti12.tfm
+cmbx12.tfm    cmmi10.tfm   cmsa10.tfm    cmssi8.tfm    cmti7.tfm
+cmbx5.tfm     cmmi12.tfm   cmsl10.tfm    cmssi9.tfm    cmti8.tfm
+cmbx6.tfm     cmmi5.tfm    cmsl12.tfm    cmssq8.tfm    cmti9.tfm
+cmbx7.tfm     cmmi6.tfm    cmsl8.tfm     cmssqi8.tfm   cmtt10.tfm
+cmbx8.tfm     cmmi7.tfm    cmsl9.tfm     cmsy10.tfm    cmtt12.tfm
+cmbx9.tfm     cmmi8.tfm    cmsltt10.tfm  cmsy5.tfm     cmtt8.tfm
+cmbxsl10.tfm  cmmi9.tfm    cmss10.tfm    cmsy6.tfm     cmtt9.tfm
+cmbxti10.tfm  cmmib10.tfm  cmss12.tfm    cmsy7.tfm     cmu10.tfm
+cmcsc10.tfm   cmr10.tfm    cmss17.tfm    cmsy8.tfm     cmvtt10.tfm
+cmdunh10.tfm  cmr12.tfm    cmss8.tfm     cmsy9.tfm     dummy.tfm
+cmex10.tfm    cmr17.tfm    cmss9.tfm     cmtcsc10.tfm  logo10.tfm
+cmff10.tfm    cmr5.tfm     cmssbx10.tfm  cmtex10.tfm   manfnt.tfm
+cmfi10.tfm    cmr6.tfm     cmssdc10.tfm  cmtex8.tfm    old_manfnt.tfm

@@ -1,0 +1,6 @@
+README
+
+This directory is searched for TeX's input files
+It should contain these files:
+
+cwebmac.tex  hyphen.tex  plain.tex
