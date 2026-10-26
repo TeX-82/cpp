@@ -136,6 +136,44 @@ using namespace pascal;
 #include "Types_in_the_outer_block.cpp"
 #include "Globals_in_the_outer_block.cpp"
 
+namespace web
+{
+	namespace impl
+	{
+		extern void format(FILE* f, pascal::integer value, pascal::integer width);
+		extern void format(FILE* f, pascal::real value, pascal::integer width, pascal::integer decimal);
+	}
+
+	// This really isn't WEB, but it's not Standard Pascal either.
+	// Implement Pascal's write(f, value:width:decimal);
+	template<typename T>
+	inline void format(pascal::file<T>& f, pascal::integer value, pascal::integer width)
+	{
+		impl::format(f.f.f, value, width);
+	}
+	template<typename T>
+	inline void format(pascal::file<T>& f, pascal::real value, pascal::integer width, pascal::integer decimal)
+	{
+		impl::format(f.f.f, value, width, decimal);
+	}
+
+	// Help with "goto" processing
+	#define goto_label_switch_(l, cases_) switch (l) { cases_; default: /*do nothing*/ break; }
+	#define goto_label_case_(l) case goto_::l: goto l; break
+	#define goto_label_case_return(l) case goto_::l: return l; break
+}
+void web::impl::format(FILE* stream, pascal::integer value, pascal::integer width)
+{
+	const std::string format = "%" + std::to_string(width) + "d";
+	fprintf(stream, format.c_str(), value);
+}
+
+void web::impl::format(FILE* stream, pascal::real value, pascal::integer width, pascal::integer decimal)
+{
+	const std::string format = "%" + std::to_string(width) + "." + std::to_string(decimal) + "f";
+	fprintf(stream, format.c_str(), value);
+}
+
 web_DEFINE(Set_initial_values);
 #define Set_initial_values static web::function_static_initialization web_function(x) {Set_initial_values_functions[__LINE__]
 
@@ -869,7 +907,7 @@ We shall stick to simple \PASCAL\ in this program, for reasons of clarity,
 even if such simplicity is sometimes unrealistic.
 */
 using eight_bits = uint8_t; /*subrange<0, 255>*/; /*unsigned one-byte quantity*/
-using byte_file = packed_file<eight_bits>;
+using byte_file = file_of<eight_bits>;
 
 /*
 @ The program deals with two binary file variables: |dvi_file| is the main
@@ -1071,7 +1109,7 @@ constexpr auto invalid_font = max_fonts;
 integer font_num[max_fonts + 1]; /*external font numbers*/
 uint16_t font_name[max_fonts + 1]; /*starting positions
 	of external font names*/
-ASCII_code names0[name_size], * const names = names0 - 1; /*characters of names*/
+array_of<subrange<1, name_size>, ASCII_code> names; /*characters of names*/
 integer font_check_sum[max_fonts + 1]; /*check sums*/
 integer font_scaled_size[max_fonts + 1]; /*scale factors*/
 integer font_design_size[max_fonts + 1]; /*design sizes*/
@@ -1422,7 +1460,7 @@ void input_ln() /*inputs a line from the terminal*/
 	k = 0;
 	while ((k < terminal_line_length) && !eoln(term_in))
 	{
-		buffer[k] = xord[term_in.d]; incr(k); get(term_in);
+		buffer[k] = xord[term_in.value]; incr(k); get(term_in);
 	}
 	buffer[k] = ' ';
 }
@@ -1781,7 +1819,7 @@ The string variable |default_directory| contains the name of this area.
 constexpr auto default_directory_name = "TeXfonts/"; /*change this to the correct name*/
 constexpr auto default_directory_name_length = 9; /*change this to the correct length*/
 
-packed_array_of_char < subrange<1, default_directory_name_length>> default_directory;
+array_of <subrange<1, default_directory_name_length>, char> default_directory;
 
 Set_initial_values = [&]() {
 	default_directory = default_directory_name; } };
@@ -1826,7 +1864,7 @@ brackets. The global variable |text_ptr| keeps track of the number of
 characters currently in the buffer.
 */
 uint8_t text_ptr = 0; /*the number of characters in |text_buf|*/
-ASCII_code text_buf0[line_length], * const text_buf = text_buf0 - 1; /*saved characters*/
+array_of<subrange<1, line_length>, ASCII_code> text_buf; /*saved characters*/
 
 /*
 @ The |flush_text| procedure will empty the buffer if there is something in it.

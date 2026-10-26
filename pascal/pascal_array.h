@@ -3,49 +3,59 @@
 #include <map>
 #include <vector>
 #include <array>
+#include <limits>
+#include <string>
 
 namespace pascal
 {
-	/* TODO
-	template<typename TSubrange, typename TValue>
-	class packed_array final
+	template<typename T>
+	struct index_range
 	{
-		std::map<TSubrange, TValue> a_;
-	public:
-		packed_array& operator=(const TValue*);
-
-		TValue& operator[](typename TSubrange::value_type i)
-		{
-			return a_[i];
-		}
+		using type = subrange<std::numeric_limits<T>::min(), std::numeric_limits<T>::max()>;
 	};
-	*/
-
-	template<typename TSubrange>
-	class packed_array_of_char final // TODO: figure out partial specialization
+	template<int low, int high>
+	struct index_range<subrange<low, high>>
 	{
-		std::map<TSubrange, char> a_;
+		using type = subrange<low, high>;
+	};
 
-	public:
-		using value_type = char;
-		value_type& operator[](TSubrange i) { return a_[i]; }
+	template<typename TIndex, typename TOf>
+	struct array_of final : array_of<typename index_range<TIndex>::type, TOf> {};
 
-		packed_array_of_char& operator=(const char* pStr)
+	template<int low, int high, typename TOf>
+	struct array_of<subrange<low, high>, TOf>
+	{
+		TOf& operator[](subrange<low, high> i) {
+			return data_[i - low];
+		}
+		const TOf& operator[](subrange<low, high> i) const {
+			return data_[i - low];
+		}
+
+		array_of<subrange<low, high>, char>& operator=(const char* pStr)
 		{
-			auto i = TSubrange::low;
+			auto i = low;
 			while (*pStr != '\0')
 			{
-				a_[i] = *pStr;
+				data_[i - low] = *pStr;
 				i++; pStr++;
 			}
 			return *this;
 		}
+
+	private:
+		static constexpr int size = high - low + 1;	
+		std::array<TOf, size> data_;
 	};
 
-	template<typename TIndex, typename TOf>
-	using array_of = std::map<TIndex, TOf>;
-
-	template<size_t TSize, typename TOf>
-	using array = std::array<TOf, TSize+1>;
-
+	template<int low, int high, typename TOf>
+	inline auto substr(const array_of<subrange<low, high>, TOf>& array_of, int s, int e)
+	{
+		std::string retval;
+		for (int i = s; i < e; i++)
+		{
+			retval += array_of[i];
+		}
+		return retval;
+	}
 }

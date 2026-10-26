@@ -1,0 +1,14 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="../tex.MASTER/tex.web" />
+  </Folder>
+  <Project Path="dvitype/dvitype.vcxproj" Id="9d1137b9-9cc1-4f61-9c10-0af73c95afd3" />
+  <Project Path="Program/Program.vcxproj" Id="976b2c65-9690-41be-b941-75cff4014590" />
+  <Project Path="TripTest/TripTest.vcxproj" Id="b31f11fd-0fad-46eb-87f0-472303c10b05" />
+  <Project Path="tex/tex.vcxproj" Id="deeb7b6f-c4d6-499f-a01f-e18620c61c38">
+    <BuildDependency Project="dvitype/dvitype.vcxproj" />
+  </Project>
+</Solution>

@@ -14,5 +14,37 @@
     <ClCompile Include="tex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="../pascal/pascal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../pascal/web.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="unit_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="../pascal/pascal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../pascal/web.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="unit_test.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pascal\pascal_array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Compiler_directives.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tex_ref.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

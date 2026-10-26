@@ -14,4 +14,4 @@ inclusive. The following definitions should be adjusted if necessary.
 @^system dependencies@>
 */
 using text_char=char; /*the data type of characters in text files*/ 
-using text_file = packed_file<text_char>;
+using text_file = file_of<text_char>;

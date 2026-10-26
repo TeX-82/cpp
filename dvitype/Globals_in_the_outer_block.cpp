@@ -12,7 +12,7 @@ current font metric file name before |open_tfm_file| is called.
 constexpr auto name_length = 50; /*a file name shouldn't be longer than this*/
 
 integer cur_loc; /*where we are about to look, in |dvi_file|*/ 
-packed_array_of_char < subrange < 1, name_length>> cur_name; /*external name,
+array_of < subrange < 1, name_length>, char> cur_name; /*external name,
   with no lower case letters*/ 
 
 text_file term_out; /*the terminal, considered as an output file*/ 

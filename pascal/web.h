@@ -43,29 +43,4 @@ namespace web
 
 	// define a function to actually call the functions
 	#define web_DEFINE(name) web::functions web_paste(name, _functions); void web_paste(name, _)() { web::call_functions(web_paste(name, _functions)); }
-
-
-	namespace impl
-	{
-		extern void format(FILE* f, pascal::integer value, pascal::integer width);
-		extern void format(FILE* f, pascal::real value, pascal::integer width, pascal::integer decimal);
-	}
-
-	// This really isn't WEB, but it's not Standard Pascal either.
-	// Implement Pascal's write(f, value:width:decimal);
-	template<typename T>
-	inline void format(pascal::file<T>& f, pascal::integer value, pascal::integer width)
-	{
-		impl::format(f.f.f, value, width);
-	}
-	template<typename T>
-	inline void format(pascal::file<T>& f, pascal::real value, pascal::integer width, pascal::integer decimal)
-	{
-		impl::format(f.f.f, value, width, decimal);
-	}
-
-	// Help with "goto" processing
-	#define goto_label_switch_(l, cases_) switch (l) { cases_; default: /*do nothing*/ break; }
-	#define goto_label_case_(l) case goto_::l: goto l; break
-	#define goto_label_case_return(l) case goto_::l: return l; break
 }

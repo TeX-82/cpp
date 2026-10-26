@@ -11,6 +11,8 @@
 #include <type_traits>
 #include <limits>
 #include <utility>
+#include <exception>
+#include <ios>
 
 namespace pascal
 {
@@ -21,62 +23,25 @@ namespace pascal
 
 namespace pascal
 {
-	namespace subrange_impl
-	{
-		template<typename T>
-		inline constexpr bool in_subrange(int64_t low, int64_t high)
-		{
-			constexpr auto min = std::numeric_limits<T>::min();
-			constexpr auto max = std::numeric_limits<T>::max();
-			return (((low < 0) || (high < 0)) ? std::is_signed_v<T> : true) &&
-				std::is_integral_v<T> && (low < high) &&
-				((low >= min) && (low <= max)) && ((high >= min) && (high <= max));
-		}
-
-		// Make a signed or unsigned T
-		template<typename T, bool is_signed>
-		using make_t = std::enable_if_t<std::is_integral_v<T>, // error out sooner
-			std::conditional_t <is_signed, std::make_signed_t<T>, std::make_unsigned_t<T>> >;
-
-		// Try to use TSubrange; if it fails, use TLarger.
-		template<int64_t low, int64_t high, typename TSubrange, typename TLarger>
-		using use_t_ = std::conditional_t < in_subrange<TSubrange>(low, high), TSubrange, TLarger>;
-		// Call make_t so that "signed TIntegral" or "unsigned TIntegral" is passed
-		template<int64_t low, int64_t high, typename TIntegral, typename TLarger>
-		using use_t = use_t_ < low, high, make_t <TIntegral, low < 0>, TLarger>;
-
-		// Subrange will be one these types; signed if low<0 otherwise unsigned
-		template<int64_t low, int64_t high>
-		using find_t =
-			use_t<low, high, int8_t,
-			use_t<low, high, int16_t,
-			use_t<low, high, int32_t,
-			use_t<low, high, int64_t,
-			std::false_type>>>>;
-	}
-
-	template<int64_t low_, int64_t high_, typename TValue = subrange_impl::find_t<low_, high_> >
+	template<ptrdiff_t low, ptrdiff_t high, typename TValue = int>
 	struct subrange final
 	{
 		using value_type = TValue;
-		static constexpr value_type low = low_;
-		static constexpr value_type high = high_;
-	private:
-		static_assert(std::is_integral_v<value_type>);
-		value_type value = low;
-
-	public:
 		subrange() = default;
 		template<typename T>
 		subrange(T v) : value(v)
 		{
-			if ((value < low) || (value > high))
-			{
-				throw std::invalid_argument("value");
-			}
+			//if ((value < low) || (value > high))
+			//{
+			//	throw std::invalid_argument("value");
+			//}
 		}
 
 		operator value_type() const { return value; }
+
+	private:
+		static_assert(std::is_integral_v<value_type>);
+		value_type value = low;
 	};
 }
 
@@ -89,9 +54,9 @@ namespace pascal
 		return i & 1;
 	}
 
-	inline unsigned char chr(integer i)
+	inline char chr(integer i)
 	{
-		return static_cast<unsigned char>(i);
+		return static_cast<char>(i);
 	}
 	inline integer ord(char ch)
 	{
@@ -120,7 +85,7 @@ namespace pascal
 	struct file final
 	{
 		impl::file f;
-		T d{ 0 };
+		T value{ 0 };
 		file() = default;
 		file(const file&) = delete;
 		file& operator=(const file&) = delete;
@@ -128,7 +93,7 @@ namespace pascal
 		file& operator=(file&&) = default;
 	};
 	template<typename T>
-	using packed_file = file<T>;
+	using file_of = file<T>;
 
 	namespace impl
 	{
@@ -162,17 +127,17 @@ namespace pascal
 	template<typename T>
 	inline void put(file<T>& file)
 	{
-		impl::put(&(file.d), sizeof(file.d), file.f);
+		impl::put(&(file.value), sizeof(file.value), file.f);
 	}
 
 	template<typename T>
 	inline void get(file<T>& file)
 	{
-		impl::get(&(file.d), sizeof(file.d), file.f);
+		impl::get(&(file.value), sizeof(file.value), file.f);
 	}
 
 	template<size_t N>
-	static inline std::string to_string(packed_array_of_char<subrange<1, N>> pa)
+	static inline std::string to_string(array_of<subrange<1, N>, char> pa)
 	{
 		std::string retval;
 		int64_t i = 1;
@@ -185,9 +150,47 @@ namespace pascal
 		}
 		return retval;
 	}
+	//template<size_t N>
+	//static inline int from_string(const std::string& s, array_of<subrange<1, N>, char>& result)
+	//{
+	//	int i = 0;
+	//	const auto length = strlen(s.c_str());
+	//	for (; i < length; i++)
+	//	{
+	//		result[i+1] = s[i];
+	//	}
+	//	if (i+1 < N)
+	//		result[i+1] = '\0';
+	//	return length;
+	//}
 
 	template<typename T>
-	inline void reset(file<T>& file, const std::string& name="", const char* mode="r")
+	inline void do_reset_(file<T>& file, const std::string& name, const std::string& mode, const char* open_mode)
+	{
+		file.f = std::move(impl::open(name, open_mode));
+		if (file.f.f != nullptr)
+		{
+			get(file);
+		}
+		else
+		{
+			// "The `\.{/O}' parameter tells the operating system not to issue its own error messages if something goes wrong."
+			if (mode.contains("/O"))
+			{
+			}
+			else
+			{
+				throw std::ios_base::failure("reset(): '" + name + "' file not found.");
+			}
+		}
+	}
+	template<typename T>
+	inline void reset_(file<T>& file, const std::string& name, const std::string& mode)
+	{
+		do_reset_(file, name, mode, "rb");
+	}
+	template<>
+	inline void reset_(file<char>& file, const std::string& name, const std::string& mode)
 	{
 		// hack to match tex.web: reset(term_in,'TTY:','/O/I') {open the terminal for text input}
 		if (name == "TTY:")
@@ -195,21 +198,43 @@ namespace pascal
 			file.f.f = stdin;
 			return;
 		}
-
-		file.f = std::move(impl::open(name, mode));
-		if (file.f.f != nullptr)
-		{
-			get(file);
-		}
+		do_reset_(file, name, mode, "r");
+	}
+	template<typename T>
+	inline void reset(file<T>& file, const std::string& name = "", const std::string& mode = "")
+	{
+		reset_(file, name, mode);
 	}
 	template<typename T, size_t N>
-	inline void reset(file<T>& file, packed_array_of_char<subrange<1, N>> name, const char* mode = "r")
+	inline void reset(file<T>& file, array_of<subrange<1, N>, char> name, const std::string& mode = "")
 	{
 		reset(file, to_string(name), mode);
 	}
 
 	template<typename T>
-	inline void rewrite(file<T>& file, const std::string& name="", const char* mode = "w")
+	inline void do_rewrite_(file<T>& file, const std::string& name, const std::string& mode, const char* open_mode)
+	{
+		file.f = std::move(impl::open(name, open_mode));
+		if (file.f.f == nullptr)
+		{
+			// "The `\.{/O}' parameter tells the operating system not to issue its own error messages if something goes wrong."
+			if (mode.contains("/O"))
+			{
+			}
+			else
+			{
+				throw std::ios_base::failure("rewrite(): '" + name + "' file not found.");
+			}
+		}
+	}
+
+	template<typename T>
+	inline void rewrite_(file<T>& file, const std::string& name, const std::string& mode)
+	{
+		do_rewrite_(file, name, mode, "wb");
+	}
+	template<>
+	inline void rewrite_(file<char>& file, const std::string& name, const std::string& mode)
 	{
 		// hack to match tex.web: rewrite(term_out,'TTY:','/O') {open the terminal for text output}
 		if (name == "TTY:")
@@ -217,15 +242,20 @@ namespace pascal
 			file.f.f = stdout;
 			return;
 		}
+		do_rewrite_(file, name, mode, "w");
+	}
 
-		file.f = std::move(impl::open(name, mode));
+	template<typename T>
+	inline void rewrite(file<T>& file, const std::string& name = "", const std::string& mode = "")
+	{
+		rewrite_(file, name, mode);
 	}
 	template<typename T, size_t N>
-	inline void rewrite(file<T>& file, packed_array_of_char<subrange<1, N>> name, const char* mode = "w")
+	inline void rewrite(file<T>& file, array_of<subrange<1, N>, char> name, const std::string& mode = "")
 	{
 		rewrite(file, to_string(name), mode);
 	}
-	
+
 
 	template<typename T>
 	inline void close(file<T>& file)
@@ -242,7 +272,7 @@ namespace pascal
 	template<typename T>
 	inline boolean eoln(const file<T>& file)
 	{
-		return (file.d == '\n') || eof(file);
+		return (file.value == '\n') || eof(file);
 	}
 
 	template<typename T>
@@ -254,7 +284,7 @@ namespace pascal
 	template<typename T>
 	inline void read(file<T>& file, T& x)
 	{
-		x = file.d;
+		x = file.value;
 		get(file);
 	}
 
@@ -302,70 +332,70 @@ namespace pascal
 		write_(f, std::forward<Args>(args)...);
 	}
 
-	inline void write(packed_file<char>& file, const std::string& s1, const std::string& s2="") {
+	inline void write(file_of<char>& file, const std::string& s1, const std::string& s2 = "") {
 		fprintf(file.f.f, "%s%s", s1.c_str(), s2.c_str());
 	}
-	inline void write(packed_file<char>& file, const std::string& s1, integer i, const std::string& s2) {
+	inline void write(file_of<char>& file, const std::string& s1, integer i, const std::string& s2) {
 		fprintf(file.f.f, "%s%d%s", s1.c_str(), i, s2.c_str());
 	}
-	inline void write(packed_file<char>& file, const std::string& s1, integer i1, const std::string& s2, integer i2, const std::string& s3) {
+	inline void write(file_of<char>& file, const std::string& s1, integer i1, const std::string& s2, integer i2, const std::string& s3) {
 		fprintf(file.f.f, "%s%d%s%d%s", s1.c_str(), i1, s2.c_str(), i2, s3.c_str());
 	}
-	inline void write(packed_file<char>& file, char ch) {
+	inline void write(file_of<char>& file, char ch) {
 		write(file, std::string(1, ch));
 	}
-	inline void write(packed_file<char>& file, const std::string& fmt, int i1, int i2) {
+	inline void write(file_of<char>& file, const std::string& fmt, int i1, int i2) {
 		fprintf(file.f.f, fmt.c_str(), i1, i2);
 	}
-	inline void write(packed_file<char>& file, const std::string& fmt, int i) {
+	inline void write(file_of<char>& file, const std::string& fmt, int i) {
 		fprintf(file.f.f, fmt.c_str(), i);
 	}
 
 	namespace tex_
 	{
-		inline void write(packed_file<char>& file, const std::string& s1) {
+		inline void write(file_of<char>& file, const std::string& s1) {
 			pascal::write(file, s1);
 		}
-		inline void write(packed_file<char>& file, const std::string& s1, const std::string& s2) {
+		inline void write(file_of<char>& file, const std::string& s1, const std::string& s2) {
 			pascal::write(file, s1, s2);
 		}
-		inline void write(packed_file<char>& file, char ch) {
+		inline void write(file_of<char>& file, char ch) {
 			pascal::write(file, ch);
 		}
-		inline void write(packed_file<char>& file, const std::string& s1, int i, const std::string& s2) {
+		inline void write(file_of<char>& file, const std::string& s1, int i, const std::string& s2) {
 			pascal::write(file, s1, i, s2);
 		}
-		inline void write(packed_file<char>& file, const std::string& s1, int i1, const std::string& s2, int i2, const std::string& s3) {
+		inline void write(file_of<char>& file, const std::string& s1, int i1, const std::string& s2, int i2, const std::string& s3) {
 			pascal::write(file, s1, i1, s2, i2, s3);
 		}
-		inline void write(packed_file<char>& file, const std::string& fmt, int i1, int i2) {
+		inline void write(file_of<char>& file, const std::string& fmt, int i1, int i2) {
 			pascal::write(file, fmt, i1, i2);
 		}
-		inline void write(packed_file<char>& file, const std::string& fmt, int i) {
+		inline void write(file_of<char>& file, const std::string& fmt, int i) {
 			pascal::write(file, fmt, i);
 		}
 		template<typename T>
-		inline void write(packed_file<T>& f, const T& b) {
+		inline void write(file_of<T>& f, const T& b) {
 			pascal::write(f, b);
 		}
 
-		inline void write_ln(packed_file<char>& f) {
+		inline void write_ln(file_of<char>& f) {
 			pascal::tex_::write(f, "", std::string(1, '\n'));
 		}
-		inline void write_ln(packed_file<char>& f, const std::string& s) {
+		inline void write_ln(file_of<char>& f, const std::string& s) {
 			pascal::write(f, s, std::string(1, '\n'));
 		}
-		inline void write_ln(packed_file<char>& file, const std::string& fmt,
+		inline void write_ln(file_of<char>& file, const std::string& fmt,
 			int i1, int i2, int i3, int i4, int i5,
 			int i6, int i7, int i8, int i9, int i10) {
 			fprintf(file.f.f, (fmt + "\n").c_str(), i1, i2, i3, i4, i5, i6, i7, i8, i9, i10);
 		}
 		template<typename T1, typename T2>
-		inline void write_ln(packed_file<char>& file, const std::string& fmt, const T1& v1, const T2& v2) {
+		inline void write_ln(file_of<char>& file, const std::string& fmt, const T1& v1, const T2& v2) {
 			fprintf(file.f.f, (fmt + "\n").c_str(), v1, v2);
 		}
 		template<typename T>
-		inline void write_ln(packed_file<char>& file, const std::string& fmt, const T& v) {
+		inline void write_ln(file_of<char>& file, const std::string& fmt, const T& v) {
 			fprintf(file.f.f, (fmt + "\n").c_str(), v);
 		}
 	}
@@ -382,6 +412,12 @@ namespace pascal
 		writeln(f);
 	}
 
+	template<typename ...Args>
+	void write_ln(file_of<char>& f, Args... args)
+	{
+		tex_::write_ln(f, std::forward<Args>(args)...);
+	}
+
 	/*
 	Such errors might be discovered inside of subroutines inside of subroutines,
 	so a procedure called |jump_out| has been introduced. This procedure, which
@@ -391,32 +427,14 @@ namespace pascal
 	*/
 	extern void goto_final_end();
 
-	// If "var" is a pascal::subrange<>, incr(var) will go past the high value.
-	//   for (var = init; var <= to; incr(var)) { ... }
-	inline bool for_to_init_(auto& var, auto init, auto to)
+	struct goto_exception final : public std::exception
 	{
-		var = init;
-		return var > to;
-	}
-	inline bool for_to_incr_(auto& var, auto to)
-	{
-		auto incr_ = [&]() { var = var + 1; return false; };
-		return var == to ? true : incr_();
-	}
-#define for_to(var, init, to) for (bool var_eq = for_to_init_(var, init, to); !var_eq; \
-	var_eq=for_to_incr_(var, to))
+		std::string label;
+		goto_exception(std::string_view l) : label(l) {}
+		virtual const char* what() const override { return label.c_str(); }
+	};
 
-	// for p:=nest_ptr downto 0 do
-	inline bool for_downto_init_(auto& var, auto init, auto downto)
-	{
-		var = init;
-		return var < downto;
-	}
-	inline bool for_downto_decr_(auto& var, auto downto)
-	{
-		auto decr_ = [&]() { var = var - 1; return false; };
-		return var == downto ? true : decr_();
-	}
-#define for_downto(var, init, downto) for (bool var_eq = for_downto_init_(var, init, downto); !var_eq; \
-	var_eq=for_downto_decr_(var, downto))
+	inline void goto_(std::string_view l) { throw goto_exception(l); }
+
+#define TEX_catch_goto_exception(label_) catch (const goto_exception& e) { if (e.label == #label_) goto label_	; throw; }
 }

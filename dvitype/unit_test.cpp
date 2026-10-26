@@ -3,39 +3,39 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #include "pascal.h"
 
-static std::string readFile(std::filesystem::path path)
+static auto read_all_lines(std::filesystem::path path)
 {
-	// https://stackoverflow.com/a/40903508/8877
+	std::vector<std::string> retval;
+	std::string line;
 
-	std::ifstream f(path, std::ios::in); // Open the stream to 'lock' the file.
-	const auto sz = std::filesystem::file_size(path);
+	std::ifstream f{ path };
+	while (std::getline(f, line))
+		retval.push_back(line);
 
-	std::string result(sz, '\0'); 	// Create a buffer.
-	f.read(result.data(), sz); 	// Read the whole file into the buffer.
-
-	return result;
+	return retval;
 }
 
 using text_char = char; /*the data type of characters in text files*/
-using text_file = pascal::packed_file<text_char>;
+using text_file = pascal::file_of<text_char>;
 extern text_file term_out; /*the terminal, considered as an output file*/
 
 namespace dvitype
 {	
 	bool TRIP = false; // setup for validating TeX's TRIP test output
-	std::string unit_test()
+	std::vector<std::string> unit_test()
 	{
 		TRIP = true;
-		std::string retval;
+		std::vector<std::string> retval;
 		if (main() == EXIT_SUCCESS)
 		{
 			// main() exiting will do this; but that doesn't happen with a unit-test
 			pascal::close(term_out);
 
-			retval = readFile("trip.typ");
+			retval = read_all_lines("trip.typ");
 		}
 		return retval;
 	}
